@@ -11,6 +11,12 @@ jobs:
     - name: Check out code  
       uses: actions/checkout@v1
 
+    - name: Run Terraform Format(fmt)
+      uses: docker://hashicorp/terraform:0.12.11
+      with:
+        entrypoint: terraform
+        args: fmt -check -recursive
+
     - name: Run a Terraform init  
       uses: docker://hashicorp/terraform:0.12.11
       with:
