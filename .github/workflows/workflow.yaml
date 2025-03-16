@@ -1,5 +1,10 @@
-on: 
+name: Terraform CI/CD
+
+on:
   pull_request:
+    branches:
+      - master
+  push:
     branches:
       - master
 
@@ -8,23 +13,53 @@ jobs:
     name: Validate
     runs-on: ubuntu-latest
     steps:
-    - name: Check out code  
-      uses: actions/checkout@v1
+      - name: Check out code
+        uses: actions/checkout@v2
 
-    - name: Run Terraform Format(fmt)
-      uses: docker://hashicorp/terraform:0.12.11
-      with:
-        entrypoint: terraform
-        args: fmt -check -recursive
+      - name: Run Terraform Format (fmt)
+        uses: docker://hashicorp/terraform:1.10.5
+        with:
+          entrypoint: terraform
+          args: fmt -check -recursive
 
-    - name: Run a Terraform init  
-      uses: docker://hashicorp/terraform:0.12.11
-      with:
-        entrypoint: terraform
-        args: init
+      - name: Run Terraform Init
+        uses: docker://hashicorp/terraform:1.10.5
+        with:
+          entrypoint: terraform
+          args: init
 
-    - name: Run a Terraform validate    
-      uses: docker://hashicorp/terraform:0.12.11
-      with:
-        entrypoint: terraform
-        args: validate
+      - name: Run Terraform Validate
+        uses: docker://hashicorp/terraform:1.10.5
+        with:
+          entrypoint: terraform
+          args: validate
+
+  apply:
+    name: Apply
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/master'  # Only run on merge to master
+
+    environment: packer_template 
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Run Terraform Init
+        uses: docker://hashicorp/terraform:1.10.5
+        with:
+          entrypoint: terraform
+          args: init
+
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
+
+      - name: Run Terraform Apply
+        uses: docker://hashicorp/terraform:1.10.5
+        with:
+          entrypoint: terraform
+          args: apply -auto-approve
